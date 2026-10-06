@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { CodexExecutor } from "../../open-sse/executors/codex.js";
+import { openaiToOpenAIResponsesRequest } from "../../open-sse/translator/request/openai-responses.js";
 
 function normalizeTools(tools) {
   const executor = new CodexExecutor();
@@ -199,5 +200,78 @@ describe("CodexExecutor tool normalization", () => {
         format: { type: "grammar", syntax: "lark", definition: "start: /.+/" },
       },
     ]);
+  });
+});
+
+describe("function tool strictness", () => {
+  const schema = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      agent: { type: "string" },
+      description: { type: "string" },
+      prompt: { type: "string" },
+      sessionID: { type: "string", pattern: "^ses" },
+    },
+    required: ["agent", "description", "prompt"],
+  };
+
+  function declaration(strict) {
+    return {
+      name: "subagent",
+      description: "Synthetic schema regression",
+      parameters: structuredClone(schema),
+      ...(strict === undefined ? {} : { strict }),
+    };
+  }
+
+  const cases = ["flat", "nested"].flatMap(shape =>
+    [undefined, false, true].map(strict => [shape, strict])
+  );
+
+  it.each(cases)("preserves %s strict=%s", (shape, strict) => {
+    const fn = declaration(strict);
+    const tool = shape === "flat"
+      ? { type: "function", ...fn }
+      : { type: "function", function: fn };
+    const [actual] = normalizeTools([tool]);
+
+    if (strict === undefined) expect(actual).not.toHaveProperty("strict");
+    else expect(actual.strict).toBe(strict);
+    expect(actual.parameters).toEqual(schema);
+  });
+
+  it("prefers an explicit flat boolean over nested strictness", () => {
+    const [actual] = normalizeTools([{
+      type: "function",
+      strict: false,
+      function: declaration(true),
+    }]);
+    expect(actual.strict).toBe(false);
+  });
+
+  it.each([undefined, false, true])("preserves Chat semantics for strict=%s", strict => {
+    const out = openaiToOpenAIResponsesRequest("gpt-5.5", {
+      messages: [{ role: "user", content: "probe" }],
+      tools: [{ type: "function", function: declaration(strict) }],
+    }, true, null);
+
+    expect(out.tools[0].strict).toBe(strict ?? false);
+    const [actual] = normalizeTools(out.tools);
+    expect(actual.strict).toBe(strict ?? false);
+    expect(actual.parameters).toEqual(schema);
+    expect(actual.parameters.required).not.toContain("sessionID");
+  });
+
+  it("keeps native Responses omission through translation and normalization", () => {
+    const out = openaiToOpenAIResponsesRequest("gpt-5.5", {
+      input: "probe",
+      tools: [{ type: "function", ...declaration(undefined) }],
+    }, true, null);
+
+    expect(out.tools[0]).not.toHaveProperty("strict");
+    const [actual] = normalizeTools(out.tools);
+    expect(actual).not.toHaveProperty("strict");
+    expect(actual.parameters).toEqual(schema);
   });
 });
