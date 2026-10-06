@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: "Existing fork tag, for example v0.5.95-tool-strict.1"
+        description: "Existing fork tag, for example v0.5.95-tool-strict.2"
         required: true
         type: string
       promote_latest:
@@ -70,7 +70,7 @@ jobs:
           }
 
           if (!match) {
-            console.error(`Expected a fork release tag like v0.5.95-tool-strict.1, received: ${tag || "<empty>"}`);
+            console.error(`Expected a fork release tag like v0.5.95-tool-strict.2, received: ${tag || "<empty>"}`);
             process.exit(1);
           }
 
@@ -126,6 +126,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+
+      # npm 10 crashes resolving the current Vitest peer graph; use the tested CLI.
+      - name: Pin npm for regression installs
+        run: npm install --global npm@11.19.0
 
       - name: Install test dependencies
         run: |
