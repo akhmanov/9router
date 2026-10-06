@@ -21,6 +21,14 @@
 
 </div>
 
+## Fork: tool strictness hotfix
+
+Based on upstream [`v0.5.95`](https://github.com/decolua/9router/commit/a99cf57239ff778b61e434c2786009d5ed1c412c). This fork preserves function-tool `strict` settings through Chat Completions → Responses → Codex, keeping optional arguments optional without rewriting tool-call arguments.
+
+Image: `ghcr.io/akhmanov/9router:0.5.95-tool-strict.1` (amd64/arm64). Releases are regression-tested and smoke-tested; publication does not deploy to production or promote `latest`. Pin the published image digest when deploying.
+
+Upstream dependency advisories are not addressed by this hotfix. The documentation and npm/Docker Hub installation commands below refer to upstream, not this fork.
+
 ---
 
 ## 🤔 Why 9Router?

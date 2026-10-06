@@ -3,11 +3,11 @@ name: Build and Push Docker Image
 on:
   push:
     tags:
-      - "v*"
+      - "v*-tool-strict.*"
   workflow_dispatch:
     inputs:
       release_tag:
-        description: "Existing vX.Y.Z tag to publish"
+        description: "Existing fork tag, for example v0.5.95-tool-strict.1"
         required: true
         type: string
       promote_latest:
@@ -62,7 +62,7 @@ jobs:
           const { execFileSync } = require("child_process");
 
           const tag = process.env.RELEASE_TAG || "";
-          const match = /^v((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?)$/.exec(tag);
+          const match = /^v((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)-tool-strict\.[1-9]\d*)$/.exec(tag);
 
           if (tag.includes("+")) {
             console.error(`Build metadata is not supported in Docker release tags: ${tag}`);
@@ -70,7 +70,7 @@ jobs:
           }
 
           if (!match) {
-            console.error(`Expected a Docker-safe semver tag like v0.5.81 or v0.5.81-rc.1, received: ${tag || "<empty>"}`);
+            console.error(`Expected a fork release tag like v0.5.95-tool-strict.1, received: ${tag || "<empty>"}`);
             process.exit(1);
           }
 
@@ -121,6 +121,19 @@ jobs:
           console.log(`Validated ${tag} at ${commit}`);
           console.log(`latest promotion: ${promoteLatest ? "enabled" : "disabled"}`);
           NODE
+
+      - name: Set up Node.js for offline regression
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install test dependencies
+        run: |
+          npm install --package-lock=false
+          npm install --prefix tests --package-lock=false
+
+      - name: Verify tool strictness
+        run: ./tests/node_modules/.bin/vitest run --config tests/vitest.config.js tests/unit/codex-tool-normalization.test.js tests/unit/openai-responses-custom-tools.test.js
 
   build:
     name: Build ${{ matrix.platform }}
