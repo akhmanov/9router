@@ -23,9 +23,9 @@
 
 ## Fork: tool strictness hotfix
 
-Based on upstream [`v0.5.95`](https://github.com/decolua/9router/commit/a99cf57239ff778b61e434c2786009d5ed1c412c). This fork preserves function-tool `strict` settings through Chat Completions → Responses → Codex, keeping optional arguments optional without rewriting tool-call arguments.
+Based on upstream [`v0.5.123`](https://github.com/decolua/9router/commit/5ae63d22847e07042e235b40e1d926b65e509013). This fork defaults omitted Chat Completions function-tool `strict` to `false` when translating to Responses, keeping optional arguments optional without rewriting tool-call arguments. Explicit boolean preservation in Codex is now included upstream; native Responses omission is unchanged.
 
-Image: `ghcr.io/akhmanov/9router:0.5.95-tool-strict.2` (amd64/arm64). Releases are regression-tested and smoke-tested; publication does not deploy to production or promote `latest`. Pin the published image digest when deploying.
+Image: `ghcr.io/akhmanov/9router:0.5.123-tool-strict.1` (amd64/arm64). Releases are regression-tested and smoke-tested; publication does not deploy to production or promote `latest`. Pin the published image digest when deploying.
 
 Upstream dependency advisories are not addressed by this hotfix. The documentation and npm/Docker Hub installation commands below refer to upstream, not this fork.
 
@@ -1107,6 +1107,24 @@ Vertex Partner (Anthropic / DeepSeek / GLM / Qwen via Vertex):
   vertex-partner/qwen3-next-80b-a3b-thinking-maas
 ```
 
+For a raw Google Cloud API-key connection, set the following through
+`PUT /api/providers/<connection-id>` to select the global endpoint:
+
+```json
+{
+  "providerSpecificData": {
+    "projectId": "YOUR_GOOGLE_CLOUD_PROJECT_ID",
+    "location": "global"
+  }
+}
+```
+
+With an explicit project, API-key requests honor `location` and default to
+`global` when it is omitted. Connections without an explicit project retain
+the projectless endpoint. Gemini 4 Argon supports `global`, `us`, and `eu`,
+not regional locations such as `europe-west1`; see
+[Google's supported locations](https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/4-argon).
+
 **Pro Tip:** New Google Cloud accounts get $300 credits free for 90 days. Plenty for daily coding.
 
 </details>
@@ -1470,7 +1488,7 @@ Notes:
 
 ## 🛠️ Tech Stack
 
-- **Runtime**: Node.js 20+
+- **Runtime**: Node.js 20.18.1+ (22 LTS recommended)
 - **Framework**: Next.js 16
 - **UI**: React 19 + Tailwind CSS 4
 - **Database**: SQLite (better-sqlite3 / node:sqlite / sql.js fallback)
